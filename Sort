@@ -1,0 +1,117 @@
+import timeit
+import datetime
+import statistics
+from typing import List
+
+def bubble_sort(arr: List[int]) -> None:
+    """
+    Sortowanie bąbelkowe (Bubble Sort).
+    Złożoność czasowa: O(n^2).
+    Funkcja modyfikuje listę w miejscu (in-place).
+    """
+    n = len(arr)
+    for i in range(n):
+        swapped = False
+        for j in range(0, n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        # Optymalizacja: jeśli w danym przejściu nie dokonano żadnej zamiany,
+        # to tablica jest już posortowana i możemy przerwać działanie.
+        if not swapped:
+            break
+
+def quick_sort(arr: List[int], low: int, high: int) -> None:
+    """
+    Sortowanie szybkie (Quick Sort).
+    Złożoność czasowa: O(n log n) średnio.
+    Funkcja modyfikuje listę w miejscu (in-place).
+    """
+    if low < high:
+        pivot = arr[high]
+        i = low - 1
+        for j in range(low, high):
+            if arr[j] <= pivot:  # Poprawiono błąd odwołania do globalnego 'tab'
+                i += 1
+                arr[i], arr[j] = arr[j], arr[i]
+                
+        arr[i + 1], arr[high] = arr[high], arr[i + 1]
+        partition_index = i + 1
+        
+        # Wywołania rekurencyjne dla mniejszych podtablic
+        quick_sort(arr, low, partition_index - 1)
+        quick_sort(arr, partition_index + 1, high)
+
+def insertion_sort(arr: List[int]) -> None:
+    """
+    Sortowanie przez wstawianie (Insertion Sort).
+    Złożoność czasowa: O(n^2).
+    Funkcja modyfikuje listę w miejscu (in-place).
+    """
+    for i in range(1, len(arr)):
+        key = arr[i]
+        j = i - 1
+        while j >= 0 and arr[j] > key:
+            arr[j + 1] = arr[j]
+            j -= 1
+        arr[j + 1] = key
+
+# Funkcje do testowania wydajności
+
+def load_data(filename: str) -> List[int]:
+    """Wczytuje liczby z pliku do listy (obsługa błędów za pomocą try-except)."""
+    try:
+        with open(filename, "r") as infile:
+            return [int(word) for word in infile.read().split()]
+    except FileNotFoundError:
+        print(f"Błąd: Plik {filename} nie został znaleziony.")
+        return []
+
+def measure_time(sort_func, data: List[int], is_quick_sort: bool = False) -> float:
+    """Mierzy czas wykonania przekazanego algorytmu na kopii danych."""
+    data_copy = data.copy()
+    start_time = timeit.default_timer()
+    
+    if is_quick_sort:
+        sort_func(data_copy, 0, len(data_copy) - 1)
+    else:
+        sort_func(data_copy)
+        
+    return timeit.default_timer() - start_time
+
+def generate_report():
+    """Generuje raport z przeprowadzonych pomiarów i zapisuje go do pliku."""
+    pliki_danych = ["danesort1.txt", "danesort2.txt", "danesort3.txt"]
+    wyniki = {"Bąbelkowe": [], "Wstawianie": [], "Quick Sort": []}
+
+    print("Analizuję dane i mierzę czasy. Proszę czekać...")
+
+    for plik in pliki_danych:
+        dane = load_data(plik)
+        if not dane:
+            continue
+        
+        wyniki["Bąbelkowe"].append(measure_time(bubble_sort, dane))
+        wyniki["Wstawianie"].append(measure_time(insertion_sort, dane))
+        wyniki["Quick Sort"].append(measure_time(quick_sort, dane, is_quick_sort=True))
+
+    # Zapis raportu z dynamiczną datą
+    dzisiaj = datetime.datetime.now()
+    nazwa_raportu = f"raport_{dzisiaj.strftime('%d.%m.%Y')}.txt"
+
+    with open(nazwa_raportu, "w", encoding="utf-8") as outfile:
+        outfile.write("RAPORT ALGORYTMÓW SORTOWANIA\n\n")
+        outfile.write(f"{'NAZWA':<15} | {'LICZBA PLIKÓW':<15} | {'ŚREDNI CZAS (s)':<17} | {'ODCHYLENIE STD (s)':<15}\n")
+        outfile.write("-" * 75 + "\n")
+
+        for nazwa, czasy in wyniki.items():
+            if czasy:
+                srednia = statistics.mean(czasy)
+                # Używamy pstdev (populacyjne), ponieważ próba wynosi zaledwie 3 pliki
+                odchylenie = statistics.pstdev(czasy)
+                ilosc_plikow = len(czasy)
+                outfile.write(f"{nazwa:<15} | {ilosc_plikow:<15} | {srednia:<17.6f} | {odchylenie:<15.6f}\n")
+                
+    print(f"Gotowe! Raport został wygenerowany w pliku: {nazwa_raportu}")
+
+generate_report()
